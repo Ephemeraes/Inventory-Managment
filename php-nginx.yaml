@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: php
+  template:
+    metadata:
+      labels:
+        app: php
+    spec:
+      containers:
+      - name: php
+        image: ephemeraes/registryau:phpdemo-v33
+        ports:
+        - containerPort: 9000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-service
+spec:
+  selector:
+    app: php
+  ports:
+  - name: http
+    port: 9000
+    targetPort: 9000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nginx
+spec:
+  serviceName: "nginx-service"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.24.0-alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginx-config-volume
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+      volumes:
+      - name: nginx-config-volume
+        configMap:
+          name: nginx-config
+          items:
+          - key: default.conf
+            path: default.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nginxups
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginxups
+  template:
+    metadata:
+      labels:
+        app: nginxups
+    spec:
+      containers:
+      - name: nginxups
+        image: nginx:1.24.0-alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nginxups-config-volume
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+      volumes:
+      - name: nginxups-config-volume
+        configMap:
+          name: nginxups-config
+          items:
+          - key: default.conf
+            path: default.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginxups-service
+spec:
+  selector:
+    app: nginxups
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    nodePort: 30180
+  type: NodePort
+
